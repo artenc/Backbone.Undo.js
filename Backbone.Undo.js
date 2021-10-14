@@ -101,6 +101,7 @@
 			magicFusionIndex++;
 			callstackWasIndexed = true;
 			setTimeout(function () {
+				console.log('new defer')
 				// Here comes the magic. With a Timeout of 0 
 				// milliseconds this function gets called whenever
 				// the current callstack is completed
