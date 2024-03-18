@@ -100,19 +100,12 @@
 		function indexCycle() {
 			magicFusionIndex++;
 			callstackWasIndexed = true;
-			setTimeout(function () {
-				console.log('new defer')
+			_.defer(function () {
 				// Here comes the magic. With a Timeout of 0 
 				// milliseconds this function gets called whenever
 				// the current callstack is completed
 				callstackWasIndexed = false;
-			}, 500)
-			// _.defer(function () {
-			// 	// Here comes the magic. With a Timeout of 0 
-			// 	// milliseconds this function gets called whenever
-			// 	// the current callstack is completed
-			// 	callstackWasIndexed = false;
-			// })
+			})
 		}
 		return function () {
 			if (!callstackWasIndexed) {
