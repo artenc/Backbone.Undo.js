@@ -81,37 +81,29 @@
 	 * @return {number} MagicFusionIndex
 	 */
 	var getMagicFusionIndex = (function () {
-		// If you add several models to a collection or set several
-		// attributes on a model all in sequence and yet all for
-		// example in one function, then several Undo-Actions are
-		// generated.
-		// If you want to undo your last action only the last model
-		// would be removed from the collection or the last set
-		// attribute would be changed back to its previous value.
-		// To prevent that we have to figure out a way to combine
-		// all those actions that happened "at the same time". 
-		// Timestamps aren't exact enough. A complex routine could 
-		// run several milliseconds and in that time produce a lot 
-		// of actions with different timestamps.
-		// Instead we take advantage of the single-threadedness of
-		// JavaScript:
+		let magicFusionIndex = 0
 
-		var callstackWasIndexed = false, magicFusionIndex = -1;
-		function indexCycle() {
-			magicFusionIndex++;
-			callstackWasIndexed = true;
-			_.defer(function () {
-				// Here comes the magic. With a Timeout of 0 
-				// milliseconds this function gets called whenever
-				// the current callstack is completed
-				callstackWasIndexed = false;
-			})
+		const indexCycle = () => {
+			magicFusionIndex++
 		}
-		return function () {
-			if (!callstackWasIndexed) {
-				indexCycle();
+		const indexCycleDebounce = _.debounce(indexCycle, 250)
+
+		return function (opt = {}) {
+			opt = {
+				hold: false,
+				immediate: false,
+				...opt,
 			}
-			return magicFusionIndex;
+
+			if (!opt.hold) {
+				if (opt.immediate) {
+					indexCycle()
+				} else {
+					indexCycleDebounce()
+				}
+			}
+
+			return magicFusionIndex
 		}
 	})();
 
@@ -324,7 +316,7 @@
 			var res = apply(undoTypes[type]["on"], undoTypes[type], args), diff;
 			if (hasKeys(res, "object", "before", "after")) {
 				res.type = type;
-				res.magicFusionIndex = getMagicFusionIndex();
+				res.magicFusionIndex = getMagicFusionIndex({ hold: stack.holdMagicFusion });
 				res.undoTypes = undoTypes;
 				if (stack.pointer < stack.length - 1) {
 					// New Actions must always be added to the end of the stack.
@@ -578,6 +570,7 @@
 		model: Action,
 		pointer: -1, // The pointer indicates the index where we are located within the stack. We start at -1
 		track: false,
+		holdMagicFusion: false,
 		isCurrentlyUndoRedoing: false,
 		maximumStackLength: Infinity,
 		setMaxLength: function (val) {
@@ -788,7 +781,21 @@
 		clear: function() {
 			this.stack.reset();
 			this.stack.pointer = -1;
-		}
+		},
+
+		holdMagicFusion: function() {
+			this.stack.holdMagicFusion = true
+		},
+
+		resumeMagicFusion: function() {
+			if (!this.stack.holdMagicFusion) {
+				return
+			}
+
+			this.stack.holdMagicFusion = false
+
+			getMagicFusionIndex()
+		},
 	});
 
 	_.extend(UndoManager, {
